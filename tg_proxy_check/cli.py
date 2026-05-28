@@ -70,12 +70,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-live", action="store_true", help="Не рисовать live-таблицу")
     parser.add_argument("--output-dir", default="reports", help="Папка для отчётов")
     parser.add_argument("--proxy", help="Проверить только один прокси по имени")
-    parser.add_argument(
-        "--probe-mode",
-        choices=("getme", "logs"),
-        default="getme",
-        help="getme делает Bot API getMe; logs смотрит только Docker logs/status без Bot API запросов",
-    )
     parser.add_argument("--cleanup-only", action="store_true", help="Только удалить старые временные контейнеры и выйти")
     return parser
 
@@ -119,10 +113,7 @@ def run_checks(*, config: AppConfig, runner: DockerRunner, args: argparse.Namesp
                 cycle_started = time.monotonic()
                 _collect_logs(runner, stats, active, log_offsets)
 
-                if args.probe_mode == "getme":
-                    _probe_getme_cycle(config, runner, stats, active, measurements)
-                else:
-                    _update_container_statuses(runner, stats, active)
+                _probe_getme_cycle(config, runner, stats, active, measurements)
 
                 _collect_logs(runner, stats, active, log_offsets)
                 live.update(list(stats.values()))
@@ -213,23 +204,6 @@ def _collect_logs(
         lines, next_offset = runner.fetch_new_logs(container_name, log_offsets.get(container_name, 0))
         log_offsets[container_name] = next_offset
         stats[proxy_name].record_log_lines(lines)
-
-
-def _update_container_statuses(
-    runner: DockerRunner,
-    stats: dict[str, ProxyRuntimeStats],
-    active: dict[str, str],
-) -> None:
-    for proxy_name, container_name in active.items():
-        status = runner.get_container_status(container_name)
-        item = stats[proxy_name]
-        if status == "running":
-            if item.last_status in ("pending", "started", "running"):
-                item.last_status = "running"
-                item.last_error = ""
-        else:
-            item.last_status = status
-            item.last_error = f"container status: {status}"
 
 
 def _configure_stdout() -> None:
