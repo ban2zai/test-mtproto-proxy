@@ -39,10 +39,12 @@ class LiveRenderer:
         table = Table(title="MTProto proxy stability check")
         table.add_column("name")
         table.add_column("server:port")
+        table.add_column("attempts", justify="right")
         table.add_column("total", justify="right")
         table.add_column("ok", justify="right")
         table.add_column("fail", justify="right")
         table.add_column("timeout", justify="right")
+        table.add_column("rate limit", justify="right")
         table.add_column("success", justify="right")
         table.add_column("avg", justify="right")
         table.add_column("p95", justify="right")
@@ -56,10 +58,12 @@ class LiveRenderer:
             table.add_row(
                 item.proxy.name,
                 f"{item.proxy.server}:{item.proxy.port}",
+                str(item.attempts_total),
                 str(item.checks_total),
                 str(item.ok_count),
                 str(item.fail_count),
                 str(item.timeout_count),
+                str(item.rate_limited_count),
                 f"{item.success_rate:.1f}%",
                 _fmt(item.avg_response_ms),
                 _fmt(item.p95_response_ms),

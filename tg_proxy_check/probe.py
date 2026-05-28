@@ -89,6 +89,15 @@ def probe_get_me(
 
     elapsed_ms = int((time.perf_counter() - started) * 1000)
     response_time_ms = _coalesce_int(result.get("response_time_ms"), elapsed_ms)
+    error_type = str(result.get("error_type") or "")
+    error_message = str(result.get("error_message") or "")[:500]
+    status_code = _coalesce_int(result.get("status_code"), None)
+    error_type = _normalize_error_type(
+        error_type=error_type,
+        error_message=error_message,
+        status_code=status_code,
+    )
+
     return Measurement(
         timestamp=timestamp,
         proxy_name=proxy.name,
@@ -96,9 +105,9 @@ def probe_get_me(
         port=proxy.port,
         success=bool(result.get("success")),
         response_time_ms=response_time_ms,
-        status_code=_coalesce_int(result.get("status_code"), None),
-        error_type=str(result.get("error_type") or ""),
-        error_message=str(result.get("error_message") or "")[:500],
+        status_code=status_code,
+        error_type=error_type,
+        error_message=error_message,
     )
 
 
@@ -224,3 +233,15 @@ def _coalesce_int(value: object, default: int | None) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _normalize_error_type(
+    *,
+    error_type: str,
+    error_message: str,
+    status_code: int | None,
+) -> str:
+    message = error_message.lower()
+    if status_code == 429 or "too many requests" in message or "retry after" in message:
+        return "rate_limited"
+    return error_type

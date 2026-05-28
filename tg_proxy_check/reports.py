@@ -89,19 +89,22 @@ def _render_markdown(
         "",
         "## Ranking",
         "",
-        "| # | Proxy | Endpoint | Success | Fail | Timeout | Success rate | Avg ms | P95 ms | Max ms | Conn timeout logs | Failed conn logs | Last status |",
-        "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| # | Proxy | Endpoint | Attempts | Evaluated | Success | Fail | Timeout | Rate limit | Success rate | Avg ms | P95 ms | Max ms | Conn timeout logs | Failed conn logs | Last status |",
+        "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
 
     for index, item in enumerate(ranking, start=1):
         lines.append(
-            "| {index} | {name} | {endpoint} | {ok} | {fail} | {timeout} | {rate:.2f}% | {avg} | {p95} | {max_ms} | {conn_timeout} | {failed_conn} | {last_status} |".format(
+            "| {index} | {name} | {endpoint} | {attempts} | {evaluated} | {ok} | {fail} | {timeout} | {rate_limited} | {rate:.2f}% | {avg} | {p95} | {max_ms} | {conn_timeout} | {failed_conn} | {last_status} |".format(
                 index=index,
                 name=item.proxy.name,
                 endpoint=f"{item.proxy.server}:{item.proxy.port}",
+                attempts=item.attempts_total,
+                evaluated=item.checks_total,
                 ok=item.ok_count,
                 fail=item.fail_count,
                 timeout=item.timeout_count,
+                rate_limited=item.rate_limited_count,
                 rate=item.success_rate,
                 avg=_fmt(item.avg_response_ms),
                 p95=_fmt(item.p95_response_ms),

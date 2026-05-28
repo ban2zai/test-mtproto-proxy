@@ -36,10 +36,12 @@ class ProxyRuntimeStats:
     container_name: str = ""
     started: bool = False
     start_error: str = ""
+    attempts_total: int = 0
     checks_total: int = 0
     ok_count: int = 0
     fail_count: int = 0
     timeout_count: int = 0
+    rate_limited_count: int = 0
     response_times_ms: list[int] = field(default_factory=list)
     log_counters: LogCounters = field(default_factory=LogCounters)
     last_status: str = "pending"
@@ -58,6 +60,13 @@ class ProxyRuntimeStats:
         self.last_status = "started"
 
     def record_measurement(self, measurement: Measurement) -> None:
+        self.attempts_total += 1
+        if measurement.error_type == "rate_limited":
+            self.rate_limited_count += 1
+            self.last_status = "rate_limited"
+            self.last_error = measurement.error_message or measurement.error_type
+            return
+
         self.checks_total += 1
         if measurement.success:
             self.ok_count += 1
@@ -112,10 +121,12 @@ class ProxyRuntimeStats:
             "container_name": self.container_name,
             "started": self.started,
             "start_error": self.start_error,
+            "attempts_total": self.attempts_total,
             "checks_total": self.checks_total,
             "ok_count": self.ok_count,
             "fail_count": self.fail_count,
             "timeout_count": self.timeout_count,
+            "rate_limited_count": self.rate_limited_count,
             "success_rate": round(self.success_rate, 2),
             "avg_response_ms": self.avg_response_ms,
             "p95_response_ms": self.p95_response_ms,
