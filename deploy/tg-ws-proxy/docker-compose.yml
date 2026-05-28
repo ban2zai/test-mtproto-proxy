@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  tg-ws-proxy:
+    build:
+      context: https://github.com/Flowseal/tg-ws-proxy.git
+    image: tg-ws-proxy:local
+    container_name: tools-tg-ws-proxy-1
+    restart: unless-stopped
+    environment:
+      TG_WS_PROXY_HOST: "0.0.0.0"
+      TG_WS_PROXY_PORT: "1443"
+      # Секрет: plain 32-char hex. Сгенерировать:
+      #   python3 -c "import os; print(os.urandom(16).hex())"
+      # В telegram-bot-api передавать как: ee<этот_секрет>
+      TG_WS_PROXY_SECRET: "${TG_WS_PROXY_SECRET}"
+      # Telegram DC IP-адреса. Формат: "DC_ID:IP DC_ID:IP ..."
+      # Стандартные production IP Telegram:
+      TG_WS_PROXY_DC_IPS: "1:149.154.175.53 2:149.154.167.51 3:149.154.175.100 4:149.154.167.91 5:91.108.56.130"
+    ports:
+      # Снаружи только с localhost; внутри tools_default — по имени контейнера
+      - "127.0.0.1:1443:1443"
+    networks:
+      - tools_default
+
+networks:
+  tools_default:
+    external: true
