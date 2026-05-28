@@ -5,7 +5,6 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from pathlib import Path
 
 from .config import AppConfig, ConfigError, load_config
 from .docker_runner import DockerRunner, DockerRunnerError
@@ -83,31 +82,31 @@ def run_checks(*, config: AppConfig, runner: DockerRunner, args: argparse.Namesp
     log_offsets: dict[str, int] = {}
     exit_code = 0
 
-    if not args.keep_containers:
-        removed = runner.cleanup_temp_containers(config.test_container_prefix)
-        if removed:
-            print(f"Удалены старые временные контейнеры: {', '.join(removed)}")
-
-    print(f"Стартуем контейнеры для прокси: {len(config.proxies)}")
-    for proxy in config.proxies:
-        result = runner.start_proxy_container(config, proxy)
-        item = stats[proxy.name]
-        if result.success:
-            item.record_started(result.container_name)
-            active[proxy.name] = result.container_name
-            log_offsets[result.container_name] = 0
-            print(f"- {proxy.name}: контейнер {result.container_name} запущен")
-        else:
-            item.record_start_failure(result.container_name, result.error)
-            print(f"- {proxy.name}: не стартовал: {result.error}", file=sys.stderr)
-            exit_code = 1
-
-    if active:
-        print(f"Ждём startup: {config.startup_wait_seconds} сек.")
-        time.sleep(config.startup_wait_seconds)
-
-    deadline = time.monotonic() + config.duration_seconds
     try:
+        if not args.keep_containers:
+            removed = runner.cleanup_temp_containers(config.test_container_prefix)
+            if removed:
+                print(f"Удалены старые временные контейнеры: {', '.join(removed)}")
+
+        print(f"Стартуем контейнеры для прокси: {len(config.proxies)}")
+        for proxy in config.proxies:
+            result = runner.start_proxy_container(config, proxy)
+            item = stats[proxy.name]
+            if result.success:
+                item.record_started(result.container_name)
+                active[proxy.name] = result.container_name
+                log_offsets[result.container_name] = 0
+                print(f"- {proxy.name}: контейнер {result.container_name} запущен")
+            else:
+                item.record_start_failure(result.container_name, result.error)
+                print(f"- {proxy.name}: не стартовал: {result.error}", file=sys.stderr)
+                exit_code = 1
+
+        if active:
+            print(f"Ждём startup: {config.startup_wait_seconds} сек.")
+            time.sleep(config.startup_wait_seconds)
+
+        deadline = time.monotonic() + config.duration_seconds
         with LiveRenderer(enabled=not args.no_live) as live:
             live.update(list(stats.values()))
             while active and time.monotonic() < deadline:
