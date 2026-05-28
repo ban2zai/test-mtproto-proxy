@@ -148,6 +148,16 @@ class DockerRunner:
             start_line = 0
         return lines[start_line:], len(lines)
 
+    def get_container_status(self, container_name: str) -> str:
+        try:
+            container = self.client.containers.get(container_name)
+            container.reload()
+            return str(container.status)
+        except self._not_found:
+            return "not_found"
+        except self._docker_exception:
+            return "unknown"
+
 
 def build_container_name(prefix: str, proxy_name: str) -> str:
     safe_name = re.sub(r"[^a-zA-Z0-9_.-]+", "-", proxy_name.strip()).strip("-").lower()
